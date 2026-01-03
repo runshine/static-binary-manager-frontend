@@ -13,18 +13,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className="bg-blue-600 p-2 rounded-lg group-hover:bg-blue-500 transition-colors">
               <i className="fas fa-box-open text-xl"></i>
             </div>
-            <span className="font-bold text-xl tracking-tight uppercase">PkgVault</span>
+            <span className="font-bold text-xl tracking-tight">Static Binary Package Manager</span>
           </Link>
-          <nav className="flex space-x-6 text-sm font-medium">
-            <Link 
-              to="/" 
-              className={`hover:text-blue-400 transition-colors ${location.pathname === '/' ? 'text-blue-400' : 'text-slate-300'}`}
-            >
-              Dashboard
-            </Link>
-            <a href="#" className="text-slate-300 hover:text-blue-400">Documentation</a>
-            <a href="#" className="text-slate-300 hover:text-blue-400">Settings</a>
-          </nav>
+          {/* Removed navigation links from here */}
         </div>
       </header>
       
@@ -34,7 +25,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       <footer className="bg-white border-t border-slate-200 py-6 mt-12">
         <div className="max-w-[1800px] mx-auto px-6 text-center text-slate-500 text-sm flex justify-between items-center">
-          <span>&copy; {new Date().getFullYear()} PkgVault Multi-Arch System. Managed Linux Storage.</span>
+          <span>&copy; {new Date().getFullYear()} Static Binary Package Manager. Managed Linux Storage.</span>
           <div className="flex gap-4">
             <span className="text-slate-400">Status: <span className="text-emerald-500 font-medium">Online</span></span>
             <span className="text-slate-400">API: <span className="text-blue-500 font-medium">v1.2.0</span></span>

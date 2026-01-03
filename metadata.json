@@ -1,5 +1,5 @@
 {
-  "name": "Multi-Arch Package Manager",
+  "name": "Static Binary Package Manager",
   "description": "A robust package management system for Linux distributions across multiple architectures, featuring automated parsing, verification, and centralized storage logic.",
   "requestFramePermissions": []
 }
