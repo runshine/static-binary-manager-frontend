@@ -43,10 +43,10 @@ const PackageDetailPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 space-y-6">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div className="xl:col-span-1 space-y-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-            <h3 className="font-semibold text-slate-800 pb-2 border-b border-slate-100">Metadata</h3>
+            <h3 className="font-semibold text-slate-800 pb-2 border-b border-slate-100 uppercase text-xs tracking-wider">Metadata</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-slate-500 text-sm">System</span>
@@ -58,7 +58,7 @@ const PackageDetailPage: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 text-sm">Original File</span>
-                <span className="font-medium text-sm truncate max-w-[150px]" title={pkg.filename}>{pkg.filename}</span>
+                <span className="font-medium text-sm truncate max-w-[200px]" title={pkg.filename}>{pkg.filename}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 text-sm">Upload Date</span>
@@ -68,23 +68,23 @@ const PackageDetailPage: React.FC = () => {
           </div>
 
           <div className="bg-blue-600 p-6 rounded-xl shadow-md text-white">
-            <h3 className="font-semibold text-white mb-2">Internal storage ID</h3>
-            <code className="bg-blue-700 block p-3 rounded text-xs font-mono break-all">
+            <h3 className="font-semibold text-white mb-2 uppercase text-xs tracking-wider opacity-80">Storage Fingerprint</h3>
+            <code className="bg-blue-700 block p-3 rounded text-xs font-mono break-all border border-blue-500/30">
               {pkg.id}
             </code>
           </div>
         </div>
 
-        <div className="md:col-span-2 space-y-4">
+        <div className="xl:col-span-3 space-y-4">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="font-semibold text-slate-800">Package Contents ({pkg.files.length} files tracked)</h3>
+              <h3 className="font-semibold text-slate-800 uppercase text-xs tracking-wider">Package Contents ({pkg.files.length} files tracked)</h3>
               <span className="text-xs text-slate-500 italic">Inventory from backend</span>
             </div>
-            <div className="max-h-[600px] overflow-y-auto">
+            <div className="max-h-[700px] overflow-y-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                  <tr className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider sticky top-0 shadow-sm">
                     <th className="px-6 py-3">Installation Path</th>
                     <th className="px-6 py-3 text-right">Size (bytes)</th>
                   </tr>
@@ -99,8 +99,9 @@ const PackageDetailPage: React.FC = () => {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={2} className="px-6 py-10 text-center text-slate-400 text-sm italic">
-                        No file list available for this package.
+                      <td colSpan={2} className="px-6 py-20 text-center text-slate-400 text-sm italic">
+                        <i className="fas fa-search text-3xl mb-4 block opacity-20"></i>
+                        No file list available for this package archive.
                       </td>
                     </tr>
                   )}

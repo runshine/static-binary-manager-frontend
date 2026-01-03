@@ -26,6 +26,7 @@ export interface PackageMetadata {
 }
 
 export interface PackageFilter {
-  query: string;
+  name: string;
+  version: string;
   arch: string;
 }

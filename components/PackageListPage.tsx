@@ -8,7 +8,7 @@ import UploadModal from './UploadModal';
 const PackageListPage: React.FC = () => {
   const [packages, setPackages] = useState<PackageMetadata[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<PackageFilter>({ query: '', arch: 'all' });
+  const [filter, setFilter] = useState<PackageFilter>({ name: '', version: '', arch: 'all' });
   const [showUpload, setShowUpload] = useState(false);
   const [isVerifyingAll, setIsVerifyingAll] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -60,7 +60,6 @@ const PackageListPage: React.FC = () => {
 
   const handleVerifyAll = async () => {
     setIsVerifyingAll(true);
-    // Verification is done on server for "all" via /check-all usually, but we keep sequential frontend-driven for UI progress
     for (const pkg of packages) {
       await handleVerify(pkg.id);
     }
@@ -156,19 +155,32 @@ const PackageListPage: React.FC = () => {
       </div>
 
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-grow">
-          <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <div className="relative flex-grow min-w-[200px]">
+          <i className="fas fa-box absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
           <input 
             type="text" 
-            placeholder="Search package or version..." 
-            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={filter.query}
-            onChange={e => setFilter({ ...filter, query: e.target.value })}
+            placeholder="Package name..." 
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            value={filter.name}
+            onChange={e => setFilter({ ...filter, name: e.target.value })}
             onKeyDown={handleKeyDown}
           />
         </div>
+        
+        <div className="relative w-full md:w-48">
+          <i className="fas fa-code-branch absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input 
+            type="text" 
+            placeholder="Version (e.g. v1.0)..." 
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            value={filter.version}
+            onChange={e => setFilter({ ...filter, version: e.target.value })}
+            onKeyDown={handleKeyDown}
+          />
+        </div>
+
         <select 
-          className="px-4 py-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full md:w-auto px-4 py-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           value={filter.arch}
           onChange={e => setFilter({ ...filter, arch: e.target.value })}
         >
@@ -177,12 +189,14 @@ const PackageListPage: React.FC = () => {
           <option value="aarch64">aarch64</option>
           <option value="armhf">armhf</option>
           <option value="armel">armel</option>
+          <option value="mips">mips</option>
+          <option value="ppc64le">ppc64le</option>
         </select>
 
         <button 
           onClick={handleSearch}
           disabled={isSearching}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-all flex items-center gap-2"
+          className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-all flex items-center justify-center gap-2"
         >
           {isSearching ? <i className="fas fa-circle-notch fa-spin"></i> : <i className="fas fa-search"></i>}
           Search
@@ -192,7 +206,7 @@ const PackageListPage: React.FC = () => {
           {selectedIds.size > 0 && (
             <button 
               onClick={handleBulkDelete}
-              className="px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
+              className="px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors whitespace-nowrap"
             >
               <i className="fas fa-trash-alt"></i>
               Delete ({selectedIds.size})
@@ -200,7 +214,7 @@ const PackageListPage: React.FC = () => {
           )}
           <button 
             onClick={handleClearAll}
-            className="px-3 py-2 text-slate-400 hover:text-rose-600 transition-colors text-sm font-medium"
+            className="px-3 py-2 text-slate-400 hover:text-rose-600 transition-colors text-sm font-medium whitespace-nowrap"
           >
             Clear All
           </button>
@@ -216,88 +230,90 @@ const PackageListPage: React.FC = () => {
             </div>
           </div>
         )}
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm font-semibold uppercase tracking-wider">
-              <th className="px-6 py-4 w-12 text-center">
-                <input 
-                  type="checkbox" 
-                  className="w-4 h-4 text-blue-600 rounded" 
-                  checked={selectedIds.size === packages.length && packages.length > 0}
-                  onChange={toggleSelectAll}
-                />
-              </th>
-              <th className="px-6 py-4">Package Name</th>
-              <th className="px-6 py-4">Version</th>
-              <th className="px-6 py-4">System</th>
-              <th className="px-6 py-4">Architecture</th>
-              <th className="px-6 py-4">Upload Date</th>
-              <th className="px-6 py-4 text-center">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {packages.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-6 py-20 text-center text-slate-500">
-                  <div className="flex flex-col items-center">
-                    <i className="fas fa-box-open text-4xl text-slate-200 mb-4"></i>
-                    <p>{isSearching ? 'Fetching from API...' : 'No packages found.'}</p>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm font-semibold uppercase tracking-wider">
+                <th className="px-6 py-4 w-12 text-center">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 text-blue-600 rounded cursor-pointer" 
+                    checked={selectedIds.size === packages.length && packages.length > 0}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <th className="px-6 py-4">Package Name</th>
+                <th className="px-6 py-4">Version</th>
+                <th className="px-6 py-4">System</th>
+                <th className="px-6 py-4">Architecture</th>
+                <th className="px-6 py-4">Upload Date</th>
+                <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
-            ) : (
-              packages.map(pkg => (
-                <tr key={pkg.id} className="hover:bg-slate-50 transition-colors group">
-                  <td className="px-6 py-4 text-center">
-                    <input 
-                      type="checkbox" 
-                      className="w-4 h-4 text-blue-600 rounded" 
-                      checked={selectedIds.has(pkg.id)}
-                      onChange={() => toggleSelect(pkg.id)}
-                    />
-                  </td>
-                  <td className="px-6 py-4 font-medium">
-                    <Link to={`/package/${pkg.id}`} className="text-blue-600 hover:underline">
-                      {pkg.name}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600">{pkg.version}</td>
-                  <td className="px-6 py-4 uppercase text-xs font-bold text-slate-400">{pkg.system}</td>
-                  <td className="px-6 py-4">
-                    <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold uppercase border border-blue-100">
-                      {pkg.arch}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-slate-500 text-sm">
-                    {pkg.uploadDate ? new Date(pkg.uploadDate).toLocaleString() : 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 text-center text-xl">
-                    {getStatusIcon(pkg.verificationStatus)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => handleVerify(pkg.id)}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded"
-                        title="Verify Now"
-                      >
-                        <i className="fas fa-sync"></i>
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(pkg.id)}
-                        className="p-2 text-rose-600 hover:bg-rose-50 rounded"
-                        title="Delete"
-                      >
-                        <i className="fas fa-trash"></i>
-                      </button>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {packages.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-20 text-center text-slate-500">
+                    <div className="flex flex-col items-center">
+                      <i className="fas fa-box-open text-4xl text-slate-200 mb-4"></i>
+                      <p>{isSearching ? 'Fetching from API...' : 'No packages found.'}</p>
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                packages.map(pkg => (
+                  <tr key={pkg.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="px-6 py-4 text-center">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-blue-600 rounded cursor-pointer" 
+                        checked={selectedIds.has(pkg.id)}
+                        onChange={() => toggleSelect(pkg.id)}
+                      />
+                    </td>
+                    <td className="px-6 py-4 font-medium">
+                      <Link to={`/package/${pkg.id}`} className="text-blue-600 hover:underline">
+                        {pkg.name}
+                      </Link>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">{pkg.version}</td>
+                    <td className="px-6 py-4 uppercase text-xs font-bold text-slate-400">{pkg.system}</td>
+                    <td className="px-6 py-4">
+                      <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold uppercase border border-blue-100">
+                        {pkg.arch}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-500 text-sm">
+                      {pkg.uploadDate ? new Date(pkg.uploadDate).toLocaleString() : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 text-center text-xl">
+                      {getStatusIcon(pkg.verificationStatus)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => handleVerify(pkg.id)}
+                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded"
+                          title="Verify Now"
+                        >
+                          <i className="fas fa-sync"></i>
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(pkg.id)}
+                          className="p-2 text-rose-600 hover:bg-rose-50 rounded"
+                          title="Delete"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showUpload && <UploadModal onClose={() => { setShowUpload(false); loadPackages(); }} />}

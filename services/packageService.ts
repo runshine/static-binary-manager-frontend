@@ -1,7 +1,7 @@
 
 import { PackageMetadata, VerificationStatus, FileEntry, PackageFilter } from '../types';
 
-const API_BASE = '/api';
+const API_BASE = 'https://develop.819819.xyz/api';
 
 // Helper to handle robust JSON parsing from fetch responses
 async function handleJsonResponse(response: Response) {
@@ -73,7 +73,8 @@ export const packageService = {
 
   async searchPackages(filter: PackageFilter): Promise<PackageMetadata[]> {
     const params = new URLSearchParams();
-    if (filter.query) params.append('name', filter.query);
+    if (filter.name) params.append('name', filter.name);
+    if (filter.version) params.append('version', filter.version);
     if (filter.arch && filter.arch !== 'all') params.append('architecture', filter.arch);
 
     const response = await fetch(`${API_BASE}/packages/search?${params.toString()}`);
@@ -88,6 +89,8 @@ export const packageService = {
       version: pkg.version,
       system: pkg.system,
       arch: pkg.architecture,
+      filename: pkg.original_filename,
+      uploadDate: pkg.upload_time,
       verificationStatus: mapStatus(pkg.check_status),
       files: []
     }));
