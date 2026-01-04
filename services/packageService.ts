@@ -1,5 +1,5 @@
 
-import { PackageMetadata, VerificationStatus, PackageFilter, GlobalStats } from '../types';
+import { PackageMetadata, VerificationStatus, PackageFilter, GlobalStats } from '../types.ts';
 
 const API_BASE = 'https://develop.819819.xyz/api';
 

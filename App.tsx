@@ -1,9 +1,9 @@
 
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Layout';
-import PackageListPage from './components/PackageListPage';
-import PackageDetailPage from './components/PackageDetailPage';
+import Layout from './components/Layout.tsx';
+import PackageListPage from './components/PackageListPage.tsx';
+import PackageDetailPage from './components/PackageDetailPage.tsx';
 
 const App: React.FC = () => {
   return (

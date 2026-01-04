@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { PackageMetadata } from '../types';
-import { packageService } from '../services/packageService';
+import { PackageMetadata } from '../types.ts';
+import { packageService } from '../services/packageService.ts';
 
 const PackageDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();

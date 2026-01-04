@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { PackageMetadata, VerificationStatus, PackageFilter, GlobalStats } from '../types';
-import { packageService } from '../services/packageService';
-import UploadModal from './UploadModal';
+import { PackageMetadata, VerificationStatus, PackageFilter, GlobalStats } from '../types.ts';
+import { packageService } from '../services/packageService.ts';
+import UploadModal from './UploadModal.tsx';
 
 const PackageListPage: React.FC = () => {
   const [packages, setPackages] = useState<PackageMetadata[]>([]);
