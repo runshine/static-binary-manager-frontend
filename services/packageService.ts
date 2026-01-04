@@ -1,3 +1,4 @@
+
 import { PackageMetadata, VerificationStatus, PackageFilter, GlobalStats } from '../types';
 
 const API_BASE = 'https://develop.819819.xyz/api';
@@ -33,7 +34,14 @@ const mapPackage = (pkg: any): PackageMetadata => ({
   lastCheckTime: pkg.last_check_time,
   lastDownloadTime: pkg.last_download_time,
   verificationStatus: pkg.check_status as VerificationStatus,
-  files: []
+  files: [],
+  matchedFiles: pkg.matched_files ? pkg.matched_files.map((f: any) => ({
+    path: f.file_path,
+    name: f.file_name,
+    size: f.file_size,
+    downloadCount: f.download_count,
+    lastDownloadTime: f.last_download_time
+  })) : undefined
 });
 
 export const packageService = {
@@ -51,6 +59,14 @@ export const packageService = {
   },
 
   async searchPackages(filter: PackageFilter): Promise<PackageMetadata[]> {
+    // If searching by file, use the dedicated endpoint provided by the user
+    if (filter.filePath) {
+      const response = await fetch(`${API_BASE}/packages/files/search?filename=${encodeURIComponent(filter.filePath)}`);
+      const data = await handleJsonResponse(response);
+      return (data.packages || []).map(mapPackage);
+    }
+
+    // Otherwise use standard package search
     const params = new URLSearchParams();
     if (filter.name) params.append('name', filter.name);
     if (filter.version) params.append('version', filter.version);
@@ -58,7 +74,7 @@ export const packageService = {
 
     const response = await fetch(`${API_BASE}/packages/search?${params.toString()}`);
     const data = await handleJsonResponse(response);
-    return data.packages.map(mapPackage);
+    return (data.packages || []).map(mapPackage);
   },
 
   async getStatistics(): Promise<GlobalStats> {
@@ -88,7 +104,6 @@ export const packageService = {
   },
 
   async verifyPackages(ids: string[]): Promise<void> {
-    // Perform individual checks in sequence or small batches to respect server load
     for (const id of ids) {
       await this.verifyPackage(id);
     }

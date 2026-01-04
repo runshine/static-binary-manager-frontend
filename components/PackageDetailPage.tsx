@@ -76,7 +76,7 @@ const PackageDetailPage: React.FC = () => {
         <div className="xl:col-span-1 space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <section className="space-y-3">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Specs</h3>
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-slate-400">Global Specs</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Architecture</span>
@@ -98,7 +98,7 @@ const PackageDetailPage: React.FC = () => {
             </section>
 
             <section className="space-y-3 border-t border-slate-100 pt-6">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Traffic & Health</h3>
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-slate-400">Traffic & Health</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Downloads</span>

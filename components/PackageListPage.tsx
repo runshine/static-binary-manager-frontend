@@ -9,7 +9,7 @@ const PackageListPage: React.FC = () => {
   const [packages, setPackages] = useState<PackageMetadata[]>([]);
   const [stats, setStats] = useState<GlobalStats | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<PackageFilter>({ name: '', version: '', arch: 'all' });
+  const [filter, setFilter] = useState<PackageFilter>({ name: '', version: '', arch: 'all', filePath: '' });
   const [showUpload, setShowUpload] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -62,7 +62,7 @@ const PackageListPage: React.FC = () => {
     if (selectedIds.size === 0) return;
     setIsVerifying(true);
     try {
-      await packageService.verifyPackages(Array.from(selectedIds));
+      await packageService.verifyPackages(Array.from(selectedIds) as string[]);
       await loadData();
     } catch (error) {
       console.error("Verification failed:", error);
@@ -104,7 +104,7 @@ const PackageListPage: React.FC = () => {
   };
 
   const handleBulkDelete = async () => {
-    const ids = Array.from(selectedIds);
+    const ids = Array.from(selectedIds) as string[];
     if (ids.length === 0) return;
     if (!confirm(`Are you sure you want to delete ${ids.length} selected packages?`)) return;
     
@@ -132,7 +132,7 @@ const PackageListPage: React.FC = () => {
       {/* Condensed Statistics Row */}
       {stats && (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 flex flex-wrap lg:flex-nowrap items-center divide-x divide-slate-100 gap-y-4">
-          <div className="flex items-center gap-8 px-4 whitespace-nowrap">
+          <div className="flex items-center gap-8 px-4 whitespace-nowrap text-center sm:text-left">
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Packages</p>
               <p className="text-xl font-black text-slate-900">{stats.summary.total_packages}</p>
@@ -172,12 +172,12 @@ const PackageListPage: React.FC = () => {
       )}
 
       {/* Header & Main Controls */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Inventory Management</h1>
           <p className="text-slate-500 text-sm">Deploy and audit static binary archives across platforms.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {selectedIds.size > 0 && (
             <>
               <button 
@@ -186,7 +186,7 @@ const PackageListPage: React.FC = () => {
                 className="px-4 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 font-bold flex items-center gap-2 border border-rose-200 transition-all text-sm"
               >
                 {isDeleting ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-trash-alt"></i>}
-                Delete Selected ({selectedIds.size})
+                Delete ({selectedIds.size})
               </button>
               <button 
                 onClick={handleVerifySelected} 
@@ -194,7 +194,7 @@ const PackageListPage: React.FC = () => {
                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold flex items-center gap-2 shadow-sm transition-all text-sm"
               >
                 {isVerifying ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-shield-alt"></i>}
-                Verify Selected ({selectedIds.size})
+                Verify ({selectedIds.size})
               </button>
             </>
           )}
@@ -208,9 +208,9 @@ const PackageListPage: React.FC = () => {
       </div>
 
       {/* One-Line Search Toolbar */}
-      <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
-        <div className="flex-grow flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50/50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition-all">
-          <i className="fas fa-search text-slate-400 text-xs"></i>
+      <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 flex flex-wrap lg:flex-nowrap items-center gap-3">
+        <div className="flex-grow flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50/50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition-all min-w-[180px]">
+          <i className="fas fa-box text-slate-400 text-[10px]"></i>
           <input 
             type="text" placeholder="Package name..." 
             className="w-full bg-transparent border-none text-sm focus:outline-none"
@@ -218,8 +218,18 @@ const PackageListPage: React.FC = () => {
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
           />
         </div>
+
+        <div className="flex-grow flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50/50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition-all min-w-[180px]">
+          <i className="fas fa-file-code text-slate-400 text-[10px]"></i>
+          <input 
+            type="text" placeholder="Search by internal file..." 
+            className="w-full bg-transparent border-none text-sm focus:outline-none"
+            value={filter.filePath} onChange={e => setFilter({ ...filter, filePath: e.target.value })}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+          />
+        </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 whitespace-nowrap">
           <input 
             type="text" placeholder="Version..." 
             className="w-24 px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
@@ -243,10 +253,10 @@ const PackageListPage: React.FC = () => {
           <button 
             onClick={handleSearch} 
             disabled={isSearching} 
-            className="px-6 py-1.5 bg-slate-900 text-white rounded-lg font-bold text-sm hover:bg-slate-800 transition-colors flex items-center gap-2 whitespace-nowrap"
+            className="px-6 py-1.5 bg-slate-900 text-white rounded-lg font-bold text-sm hover:bg-slate-800 transition-colors flex items-center gap-2"
           >
-            {isSearching ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-filter"></i>}
-            Apply Filters
+            {isSearching ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-filter text-xs"></i>}
+            Apply
           </button>
         </div>
       </div>
@@ -254,7 +264,7 @@ const PackageListPage: React.FC = () => {
       {/* Table Section */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1200px]">
+          <table className="w-full text-left border-collapse min-w-[1300px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
                 <th className="px-6 py-4 w-12 text-center">
@@ -282,7 +292,7 @@ const PackageListPage: React.FC = () => {
               ) : (
                 packages.map(pkg => (
                   <tr key={pkg.id} className="hover:bg-slate-50 group transition-colors">
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center align-top pt-5">
                       <input 
                         type="checkbox" 
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
@@ -291,27 +301,46 @@ const PackageListPage: React.FC = () => {
                       />
                     </td>
                     <td className="px-6 py-4">
-                      <Link to={`/package/${pkg.id}`} className="block font-bold text-blue-600 hover:text-blue-800 transition-colors">
-                        {pkg.name}
-                      </Link>
-                      <span className="text-[10px] text-slate-400 font-mono">{pkg.version} • {pkg.system}</span>
+                      <div className="flex flex-col gap-1">
+                        <Link to={`/package/${pkg.id}`} className="block font-bold text-blue-600 hover:text-blue-800 transition-colors">
+                          {pkg.name}
+                        </Link>
+                        <span className="text-[10px] text-slate-400 font-mono">{pkg.version} • {pkg.system}</span>
+                        
+                        {/* Show matched files if searching by file */}
+                        {pkg.matchedFiles && pkg.matchedFiles.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Matched Files ({pkg.matchedFiles.length}):</p>
+                            <ul className="space-y-0.5">
+                              {pkg.matchedFiles.slice(0, 3).map((f, i) => (
+                                <li key={i} className="text-[10px] font-mono text-emerald-600 bg-emerald-50 px-1 rounded truncate max-w-xs" title={f.path}>
+                                  <i className="fas fa-file-code mr-1 opacity-50"></i> {f.name}
+                                </li>
+                              ))}
+                              {pkg.matchedFiles.length > 3 && (
+                                <li className="text-[9px] text-slate-400 italic">...and {pkg.matchedFiles.length - 3} more</li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-top pt-5">
                       <span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-bold uppercase text-slate-600 border border-slate-200">
                         {pkg.arch}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-top pt-5">
                       <div className="flex items-center gap-1.5 text-slate-600">
                         <i className="far fa-file-archive text-[10px] opacity-40"></i>
                         <span className="font-bold">{pkg.fileCount}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-mono text-xs">{formatSize(pkg.totalSize)}</td>
-                    <td className="px-6 py-4 text-[10px] text-slate-500 font-mono">
+                    <td className="px-6 py-4 align-top pt-5 text-slate-600 font-mono text-xs">{formatSize(pkg.totalSize)}</td>
+                    <td className="px-6 py-4 align-top pt-5 text-[10px] text-slate-500 font-mono whitespace-nowrap">
                       {formatDate(pkg.uploadDate)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-top pt-4">
                       <div className="flex items-center gap-3">
                         {pkg.verificationStatus === VerificationStatus.SUCCESS ? (
                           <i className="fas fa-check-circle text-emerald-500"></i>
@@ -330,7 +359,7 @@ const PackageListPage: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right align-top pt-4">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => packageService.downloadPackage(pkg.id, pkg.filename)} 

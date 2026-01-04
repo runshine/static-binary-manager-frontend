@@ -1,3 +1,4 @@
+
 export type Arch = 'x86_64' | 'aarch64' | 'armhf' | 'armel' | 'mips' | 'ppc64le';
 
 export interface FileEntry {
@@ -6,6 +7,9 @@ export interface FileEntry {
   size: number;
   downloadCount?: number;
   lastDownloadTime?: string;
+  file_path?: string; // Support backend naming
+  file_name?: string;
+  file_size?: number;
 }
 
 export enum VerificationStatus {
@@ -30,6 +34,7 @@ export interface PackageMetadata {
   lastDownloadTime: string | null;
   verificationStatus: VerificationStatus;
   files: FileEntry[];
+  matchedFiles?: FileEntry[];
 }
 
 export interface StatItem {
@@ -60,4 +65,5 @@ export interface PackageFilter {
   name: string;
   version: string;
   arch: string;
+  filePath: string;
 }
