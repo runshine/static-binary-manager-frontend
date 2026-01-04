@@ -1,102 +1,122 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { PackageMetadata, VerificationStatus, PackageFilter } from '../types';
+import { PackageMetadata, VerificationStatus, PackageFilter, GlobalStats } from '../types';
 import { packageService } from '../services/packageService';
 import UploadModal from './UploadModal';
 
 const PackageListPage: React.FC = () => {
   const [packages, setPackages] = useState<PackageMetadata[]>([]);
+  const [stats, setStats] = useState<GlobalStats | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<PackageFilter>({ name: '', version: '', arch: 'all' });
   const [showUpload, setShowUpload] = useState(false);
-  const [isVerifyingAll, setIsVerifyingAll] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const loadPackages = useCallback(async (isSearchAction = false) => {
+  const loadData = useCallback(async (isSearchAction = false) => {
     setIsSearching(true);
     try {
-      const data = isSearchAction 
-        ? await packageService.searchPackages(filter)
-        : await packageService.getPackages();
-      setPackages(data);
+      const [pkgs, statsData] = await Promise.all([
+        isSearchAction ? packageService.searchPackages(filter) : packageService.getPackages(),
+        packageService.getStatistics()
+      ]);
+      setPackages(pkgs);
+      setStats(statsData);
     } catch (error) {
-      console.error("Failed to load packages:", error);
+      console.error("Failed to load data:", error);
     } finally {
       setIsSearching(false);
     }
   }, [filter]);
 
   useEffect(() => {
-    loadPackages();
+    loadData();
   }, []);
 
-  const handleSearch = async () => {
-    await loadPackages(true);
+  const handleSearch = () => loadData(true);
+
+  const formatSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'Never';
+    return new Date(dateStr).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  };
+
+  const handleVerifySelected = async () => {
+    if (selectedIds.size === 0) return;
+    setIsVerifying(true);
+    try {
+      await packageService.verifyPackages(Array.from(selectedIds));
+      await loadData();
+    } catch (error) {
+      console.error("Verification failed:", error);
+      alert("Verification process failed.");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
-  const handleVerify = async (id: string) => {
-    setPackages(prev => prev.map(p => 
-      p.id === id ? { ...p, verificationStatus: VerificationStatus.VERIFYING } : p
-    ));
-
+  const handleSingleVerify = async (id: string) => {
+    setPackages(prev => prev.map(p => p.id === id ? { ...p, verificationStatus: VerificationStatus.VERIFYING } : p));
     try {
       const result = await packageService.verifyPackage(id);
       setPackages(prev => prev.map(p => 
-        p.id === id ? { ...p, verificationStatus: result ? VerificationStatus.SUCCESS : VerificationStatus.FAILED } : p
+        p.id === id ? { 
+          ...p, 
+          verificationStatus: result.valid ? VerificationStatus.SUCCESS : VerificationStatus.FAILED,
+          lastCheckTime: result.check_time 
+        } : p
       ));
     } catch (error) {
-      setPackages(prev => prev.map(p => 
-        p.id === id ? { ...p, verificationStatus: VerificationStatus.FAILED } : p
-      ));
+      setPackages(prev => prev.map(p => p.id === id ? { ...p, verificationStatus: VerificationStatus.FAILED } : p));
     }
   };
 
-  const handleVerifyAll = async () => {
-    setIsVerifyingAll(true);
-    for (const pkg of packages) {
-      await handleVerify(pkg.id);
-    }
-    setIsVerifyingAll(false);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this package?')) {
-      try {
-        await packageService.deletePackage(id);
-        setPackages(prev => prev.filter(p => p.id !== id));
-      } catch (e) {
-        alert('Delete failed');
-      }
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return;
+    try {
+      await packageService.deletePackage(id);
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      await loadData();
+    } catch (error) {
+      alert("Failed to delete package.");
     }
   };
 
   const handleBulkDelete = async () => {
-    if (confirm(`Are you sure you want to delete ${selectedIds.size} packages?`)) {
-      try {
-        await packageService.bulkDelete(Array.from(selectedIds));
-        setSelectedIds(new Set());
-        loadPackages();
-      } catch (e) {
-        alert('Bulk delete failed');
-      }
-    }
-  };
-
-  const handleClearAll = async () => {
-    if (confirm('WARNING: This will permanently delete ALL packages and their records. Continue?')) {
-      try {
-        await packageService.clearAll();
-        setPackages([]);
-      } catch (e) {
-        alert('Failed to clear packages');
-      }
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${ids.length} selected packages?`)) return;
+    
+    setIsDeleting(true);
+    try {
+      await packageService.bulkDelete(ids);
+      setSelectedIds(new Set());
+      await loadData();
+    } catch (error) {
+      alert("Bulk delete failed.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -107,204 +127,231 @@ const PackageListPage: React.FC = () => {
     setSelectedIds(newSelected);
   };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === packages.length && packages.length > 0) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(packages.map(p => p.id)));
-    }
-  };
-
-  const getStatusIcon = (status?: VerificationStatus) => {
-    switch (status) {
-      case VerificationStatus.SUCCESS:
-        return <i className="fas fa-check-circle text-emerald-500" title="Valid"></i>;
-      case VerificationStatus.FAILED:
-        return <i className="fas fa-times-circle text-rose-500" title="Corrupted or Missing"></i>;
-      case VerificationStatus.VERIFYING:
-        return <i className="fas fa-spinner fa-spin text-blue-500" title="Verifying..."></i>;
-      default:
-        return <i className="fas fa-clock text-slate-300" title="Pending Verification"></i>;
-    }
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Software Packages</h1>
-          <p className="text-slate-500 text-sm">Manage multi-architecture Linux distribution packages.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={handleVerifyAll}
-            disabled={isVerifyingAll || packages.length === 0}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium transition-all flex items-center gap-2"
-          >
-            <i className="fas fa-shield-alt"></i>
-            {isVerifyingAll ? 'Verifying...' : 'Verify All'}
-          </button>
-          <button 
-            onClick={() => setShowUpload(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-all flex items-center gap-2"
-          >
-            <i className="fas fa-upload"></i>
-            Upload Package
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-grow min-w-[200px]">
-          <i className="fas fa-box absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-          <input 
-            type="text" 
-            placeholder="Package name..." 
-            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            value={filter.name}
-            onChange={e => setFilter({ ...filter, name: e.target.value })}
-            onKeyDown={handleKeyDown}
-          />
-        </div>
-        
-        <div className="relative w-full md:w-48">
-          <i className="fas fa-code-branch absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-          <input 
-            type="text" 
-            placeholder="Version (e.g. v1.0)..." 
-            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            value={filter.version}
-            onChange={e => setFilter({ ...filter, version: e.target.value })}
-            onKeyDown={handleKeyDown}
-          />
-        </div>
-
-        <select 
-          className="w-full md:w-auto px-4 py-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-          value={filter.arch}
-          onChange={e => setFilter({ ...filter, arch: e.target.value })}
-        >
-          <option value="all">All Architectures</option>
-          <option value="x86_64">x86_64</option>
-          <option value="aarch64">aarch64</option>
-          <option value="armhf">armhf</option>
-          <option value="armel">armel</option>
-          <option value="mips">mips</option>
-          <option value="ppc64le">ppc64le</option>
-        </select>
-
-        <button 
-          onClick={handleSearch}
-          disabled={isSearching}
-          className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-all flex items-center justify-center gap-2"
-        >
-          {isSearching ? <i className="fas fa-circle-notch fa-spin"></i> : <i className="fas fa-search"></i>}
-          Search
-        </button>
-        
-        <div className="flex items-center gap-2 ml-auto">
-          {selectedIds.size > 0 && (
-            <button 
-              onClick={handleBulkDelete}
-              className="px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors whitespace-nowrap"
-            >
-              <i className="fas fa-trash-alt"></i>
-              Delete ({selectedIds.size})
-            </button>
-          )}
-          <button 
-            onClick={handleClearAll}
-            className="px-3 py-2 text-slate-400 hover:text-rose-600 transition-colors text-sm font-medium whitespace-nowrap"
-          >
-            Clear All
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
-        {isSearching && (
-          <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
-            <div className="flex items-center gap-3 text-blue-600 font-medium">
-              <i className="fas fa-spinner fa-spin text-2xl"></i>
-              Syncing with backend...
+      {/* Condensed Statistics Row */}
+      {stats && (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 flex flex-wrap lg:flex-nowrap items-center divide-x divide-slate-100 gap-y-4">
+          <div className="flex items-center gap-8 px-4 whitespace-nowrap">
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Packages</p>
+              <p className="text-xl font-black text-slate-900">{stats.summary.total_packages}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Storage</p>
+              <p className="text-xl font-black text-blue-600">{stats.summary.total_size_human}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Downloads</p>
+              <p className="text-xl font-black text-emerald-600">{stats.summary.total_downloads}</p>
             </div>
           </div>
-        )}
+
+          <div className="flex-grow px-6">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Architecture Distribution</p>
+            <div className="flex flex-wrap gap-1.5">
+              {stats.by_architecture.map(item => (
+                <span key={item.architecture} className="px-2 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold text-slate-600">
+                  {item.architecture}: <span className="text-slate-900">{item.package_count}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex-grow px-6">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">OS Distribution</p>
+            <div className="flex flex-wrap gap-1.5">
+              {stats.by_system.map(item => (
+                <span key={item.system} className="px-2 py-0.5 bg-blue-50/50 border border-blue-100 rounded text-[10px] font-bold text-blue-600">
+                  {item.system}: <span className="text-blue-900">{item.package_count}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header & Main Controls */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Inventory Management</h1>
+          <p className="text-slate-500 text-sm">Deploy and audit static binary archives across platforms.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {selectedIds.size > 0 && (
+            <>
+              <button 
+                onClick={handleBulkDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 font-bold flex items-center gap-2 border border-rose-200 transition-all text-sm"
+              >
+                {isDeleting ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-trash-alt"></i>}
+                Delete Selected ({selectedIds.size})
+              </button>
+              <button 
+                onClick={handleVerifySelected} 
+                disabled={isVerifying}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold flex items-center gap-2 shadow-sm transition-all text-sm"
+              >
+                {isVerifying ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-shield-alt"></i>}
+                Verify Selected ({selectedIds.size})
+              </button>
+            </>
+          )}
+          <button 
+            onClick={() => setShowUpload(true)} 
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold flex items-center gap-2 shadow-sm transition-all text-sm"
+          >
+            <i className="fas fa-plus"></i> New Package
+          </button>
+        </div>
+      </div>
+
+      {/* One-Line Search Toolbar */}
+      <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+        <div className="flex-grow flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50/50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition-all">
+          <i className="fas fa-search text-slate-400 text-xs"></i>
+          <input 
+            type="text" placeholder="Package name..." 
+            className="w-full bg-transparent border-none text-sm focus:outline-none"
+            value={filter.name} onChange={e => setFilter({ ...filter, name: e.target.value })}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+          />
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <input 
+            type="text" placeholder="Version..." 
+            className="w-24 px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            value={filter.version} onChange={e => setFilter({ ...filter, version: e.target.value })}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+          />
+          
+          <select 
+            className="px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            value={filter.arch} onChange={e => setFilter({ ...filter, arch: e.target.value })}
+          >
+            <option value="all">Any Arch</option>
+            <option value="x86_64">x86_64</option>
+            <option value="aarch64">aarch64</option>
+            <option value="armhf">armhf</option>
+            <option value="armel">armel</option>
+            <option value="mips">mips</option>
+            <option value="ppc64le">ppc64le</option>
+          </select>
+          
+          <button 
+            onClick={handleSearch} 
+            disabled={isSearching} 
+            className="px-6 py-1.5 bg-slate-900 text-white rounded-lg font-bold text-sm hover:bg-slate-800 transition-colors flex items-center gap-2 whitespace-nowrap"
+          >
+            {isSearching ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-filter"></i>}
+            Apply Filters
+          </button>
+        </div>
+      </div>
+
+      {/* Table Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+          <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm font-semibold uppercase tracking-wider">
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
                 <th className="px-6 py-4 w-12 text-center">
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 text-blue-600 rounded cursor-pointer" 
-                    checked={selectedIds.size === packages.length && packages.length > 0}
-                    onChange={toggleSelectAll}
-                  />
+                   <input 
+                     type="checkbox" 
+                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+                     checked={packages.length > 0 && selectedIds.size === packages.length}
+                     onChange={e => e.target.checked ? setSelectedIds(new Set(packages.map(p => p.id))) : setSelectedIds(new Set())} 
+                   />
                 </th>
-                <th className="px-6 py-4">Package Name</th>
-                <th className="px-6 py-4">Version</th>
-                <th className="px-6 py-4">System</th>
+                <th className="px-6 py-4">Identity</th>
                 <th className="px-6 py-4">Architecture</th>
-                <th className="px-6 py-4">Upload Date</th>
-                <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4">Files</th>
+                <th className="px-6 py-4">Size</th>
+                <th className="px-6 py-4">Uploaded At</th>
+                <th className="px-6 py-4">Health Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {packages.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-20 text-center text-slate-500">
-                    <div className="flex flex-col items-center">
-                      <i className="fas fa-box-open text-4xl text-slate-200 mb-4"></i>
-                      <p>{isSearching ? 'Fetching from API...' : 'No packages found.'}</p>
-                    </div>
-                  </td>
+                  <td colSpan={8} className="px-6 py-12 text-center text-slate-400 text-sm">No packages matching criteria.</td>
                 </tr>
               ) : (
                 packages.map(pkg => (
-                  <tr key={pkg.id} className="hover:bg-slate-50 transition-colors group">
+                  <tr key={pkg.id} className="hover:bg-slate-50 group transition-colors">
                     <td className="px-6 py-4 text-center">
                       <input 
                         type="checkbox" 
-                        className="w-4 h-4 text-blue-600 rounded cursor-pointer" 
-                        checked={selectedIds.has(pkg.id)}
-                        onChange={() => toggleSelect(pkg.id)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+                        checked={selectedIds.has(pkg.id)} 
+                        onChange={() => toggleSelect(pkg.id)} 
                       />
                     </td>
-                    <td className="px-6 py-4 font-medium">
-                      <Link to={`/package/${pkg.id}`} className="text-blue-600 hover:underline">
+                    <td className="px-6 py-4">
+                      <Link to={`/package/${pkg.id}`} className="block font-bold text-blue-600 hover:text-blue-800 transition-colors">
                         {pkg.name}
                       </Link>
+                      <span className="text-[10px] text-slate-400 font-mono">{pkg.version} • {pkg.system}</span>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">{pkg.version}</td>
-                    <td className="px-6 py-4 uppercase text-xs font-bold text-slate-400">{pkg.system}</td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold uppercase border border-blue-100">
+                      <span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-bold uppercase text-slate-600 border border-slate-200">
                         {pkg.arch}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-500 text-sm">
-                      {pkg.uploadDate ? new Date(pkg.uploadDate).toLocaleString() : 'N/A'}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5 text-slate-600">
+                        <i className="far fa-file-archive text-[10px] opacity-40"></i>
+                        <span className="font-bold">{pkg.fileCount}</span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-center text-xl">
-                      {getStatusIcon(pkg.verificationStatus)}
+                    <td className="px-6 py-4 text-slate-600 font-mono text-xs">{formatSize(pkg.totalSize)}</td>
+                    <td className="px-6 py-4 text-[10px] text-slate-500 font-mono">
+                      {formatDate(pkg.uploadDate)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {pkg.verificationStatus === VerificationStatus.SUCCESS ? (
+                          <i className="fas fa-check-circle text-emerald-500"></i>
+                        ) : pkg.verificationStatus === VerificationStatus.FAILED ? (
+                          <i className="fas fa-times-circle text-rose-500"></i>
+                        ) : pkg.verificationStatus === VerificationStatus.VERIFYING ? (
+                          <i className="fas fa-circle-notch fa-spin text-blue-500"></i>
+                        ) : (
+                          <i className="fas fa-clock text-slate-300"></i>
+                        )}
+                        <div>
+                          <p className={`text-[10px] font-bold uppercase ${pkg.verificationStatus === VerificationStatus.SUCCESS ? 'text-emerald-700' : 'text-slate-500'}`}>
+                            {pkg.verificationStatus}
+                          </p>
+                          <p className="text-[9px] text-slate-400 font-mono">Audit: {formatDate(pkg.lastCheckTime)}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
-                          onClick={() => handleVerify(pkg.id)}
-                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded"
-                          title="Verify Now"
+                          onClick={() => packageService.downloadPackage(pkg.id, pkg.filename)} 
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors" 
+                          title="Download"
                         >
-                          <i className="fas fa-sync"></i>
+                          <i className="fas fa-download text-sm"></i>
                         </button>
                         <button 
-                          onClick={() => handleDelete(pkg.id)}
-                          className="p-2 text-rose-600 hover:bg-rose-50 rounded"
+                          onClick={() => handleSingleVerify(pkg.id)} 
+                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" 
+                          title="Verify"
+                        >
+                          <i className="fas fa-sync-alt text-sm"></i>
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(pkg.id, pkg.name)} 
+                          className="p-2 text-rose-600 hover:bg-rose-50 rounded transition-colors" 
                           title="Delete"
                         >
-                          <i className="fas fa-trash"></i>
+                          <i className="fas fa-trash-alt text-sm"></i>
                         </button>
                       </div>
                     </td>
@@ -316,7 +363,7 @@ const PackageListPage: React.FC = () => {
         </div>
       </div>
 
-      {showUpload && <UploadModal onClose={() => { setShowUpload(false); loadPackages(); }} />}
+      {showUpload && <UploadModal onClose={() => { setShowUpload(false); loadData(); }} />}
     </div>
   );
 };

@@ -1,74 +1,53 @@
-
-import { PackageMetadata, VerificationStatus, FileEntry, PackageFilter } from '../types';
+import { PackageMetadata, VerificationStatus, PackageFilter, GlobalStats } from '../types';
 
 const API_BASE = 'https://develop.819819.xyz/api';
 
-// Helper to handle robust JSON parsing from fetch responses
 async function handleJsonResponse(response: Response) {
   const text = await response.text();
   try {
-    // Attempt to parse the full trimmed text
     return JSON.parse(text.trim());
   } catch (e) {
-    console.error("JSON Parse Error. Raw response:", text);
-    
-    // Fallback: If there is trailing junk (like a script injected by a proxy), 
-    // try to extract the valid JSON part by finding the last closing brace or bracket
     const lastBrace = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
     if (lastBrace !== -1) {
       try {
         return JSON.parse(text.substring(0, lastBrace + 1));
       } catch (innerError) {
-        throw new Error(`Failed to parse JSON: ${text.substring(0, 40)}...`);
+        throw new Error(`Failed to parse JSON`);
       }
     }
     throw e;
   }
 }
 
-// Map backend check_status to frontend VerificationStatus
-const mapStatus = (status: string): VerificationStatus => {
-  switch (status) {
-    case 'valid': return VerificationStatus.SUCCESS;
-    case 'invalid': return VerificationStatus.FAILED;
-    case 'checking': return VerificationStatus.VERIFYING;
-    default: return VerificationStatus.PENDING;
-  }
-};
+const mapPackage = (pkg: any): PackageMetadata => ({
+  id: pkg.id,
+  name: pkg.name,
+  version: pkg.version,
+  system: pkg.system,
+  arch: pkg.architecture || pkg.arch,
+  filename: pkg.original_filename,
+  uploadDate: pkg.upload_time,
+  totalSize: pkg.total_size || 0,
+  fileCount: pkg.file_count || 0,
+  downloadCount: pkg.download_count || 0,
+  lastCheckTime: pkg.last_check_time,
+  lastDownloadTime: pkg.last_download_time,
+  verificationStatus: pkg.check_status as VerificationStatus,
+  files: []
+});
 
 export const packageService = {
-  // Parse filename locally for UI feedback before upload
   parseFilename(filename: string): Partial<PackageMetadata> | null {
     const regex = /^(.+)-([^-]+)-(linux)-([^-.]+)\.(zip|tar\.gz)$/i;
     const match = filename.match(regex);
     if (!match) return null;
-
-    return {
-      name: match[1],
-      version: match[2],
-      system: match[3],
-      arch: match[4]
-    };
+    return { name: match[1], version: match[2], system: match[3], arch: match[4] };
   },
 
   async getPackages(): Promise<PackageMetadata[]> {
     const response = await fetch(`${API_BASE}/packages`);
-    if (!response.ok) throw new Error(`Server returned ${response.status}`);
-    
     const data = await handleJsonResponse(response);
-    if (!data.success) throw new Error(data.error || 'Failed to fetch packages');
-    
-    return data.packages.map((pkg: any) => ({
-      id: pkg.id,
-      name: pkg.name,
-      version: pkg.version,
-      system: pkg.system,
-      arch: pkg.architecture,
-      filename: pkg.original_filename,
-      uploadDate: pkg.upload_time,
-      verificationStatus: mapStatus(pkg.check_status),
-      files: []
-    }));
+    return data.packages.map(mapPackage);
   },
 
   async searchPackages(filter: PackageFilter): Promise<PackageMetadata[]> {
@@ -78,87 +57,69 @@ export const packageService = {
     if (filter.arch && filter.arch !== 'all') params.append('architecture', filter.arch);
 
     const response = await fetch(`${API_BASE}/packages/search?${params.toString()}`);
-    if (!response.ok) throw new Error(`Search failed with status ${response.status}`);
-    
     const data = await handleJsonResponse(response);
-    if (!data.success) throw new Error(data.error || 'Search failed');
+    return data.packages.map(mapPackage);
+  },
 
-    return data.packages.map((pkg: any) => ({
-      id: pkg.id,
-      name: pkg.name,
-      version: pkg.version,
-      system: pkg.system,
-      arch: pkg.architecture,
-      filename: pkg.original_filename,
-      uploadDate: pkg.upload_time,
-      verificationStatus: mapStatus(pkg.check_status),
-      files: []
-    }));
+  async getStatistics(): Promise<GlobalStats> {
+    const response = await fetch(`${API_BASE}/packages/statistics`);
+    const data = await handleJsonResponse(response);
+    return data.statistics;
   },
 
   async uploadPackage(file: File): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);
-
-    const response = await fetch(`${API_BASE}/packages/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-    
-    const data = await handleJsonResponse(response);
-    if (!data.success) throw new Error(data.error || 'Upload failed');
-    return data;
+    const response = await fetch(`${API_BASE}/packages/upload`, { method: 'POST', body: formData });
+    return await handleJsonResponse(response);
   },
 
   async getPackageById(id: string): Promise<PackageMetadata> {
     const response = await fetch(`${API_BASE}/packages/${id}`);
-    if (!response.ok) throw new Error(`Fetch package failed with status ${response.status}`);
-    
     const data = await handleJsonResponse(response);
-    if (!data.success) throw new Error(data.error || 'Failed to fetch package details');
-
-    return {
-      id: data.package.id,
-      name: data.package.name,
-      version: data.package.version,
-      system: data.package.system,
-      arch: data.package.architecture,
-      filename: data.package.original_filename,
-      uploadDate: data.package.upload_time,
-      verificationStatus: mapStatus(data.package.check_status),
-      files: data.files || []
-    };
+    const pkg = mapPackage(data.package);
+    pkg.files = data.files || [];
+    return pkg;
   },
 
-  async verifyPackage(id: string): Promise<boolean> {
+  async verifyPackage(id: string): Promise<any> {
     const response = await fetch(`${API_BASE}/packages/${id}/check`);
-    const data = await handleJsonResponse(response);
-    return data.valid === true;
+    return await handleJsonResponse(response);
+  },
+
+  async verifyPackages(ids: string[]): Promise<void> {
+    // Perform individual checks in sequence or small batches to respect server load
+    for (const id of ids) {
+      await this.verifyPackage(id);
+    }
+  },
+
+  async verifyAllPackages(): Promise<any> {
+    const response = await fetch(`${API_BASE}/packages/check-all`, { method: 'POST' });
+    return await handleJsonResponse(response);
+  },
+
+  async downloadPackage(id: string, filename: string) {
+    window.open(`${API_BASE}/packages/${id}/download`, '_blank');
+  },
+
+  async downloadFile(packageId: string, filePath: string) {
+    window.open(`${API_BASE}/packages/${packageId}/files/download?path=${encodeURIComponent(filePath)}`, '_blank');
   },
 
   async deletePackage(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/packages/${id}`, {
-      method: 'DELETE',
-    });
-    const data = await handleJsonResponse(response);
-    if (!data.success) throw new Error(data.error || 'Delete failed');
+    await fetch(`${API_BASE}/packages/${id}`, { method: 'DELETE' });
   },
 
   async bulkDelete(ids: string[]): Promise<void> {
-    const response = await fetch(`${API_BASE}/packages/batch-delete`, {
+    await fetch(`${API_BASE}/packages/batch-delete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ package_ids: ids }),
     });
-    const data = await handleJsonResponse(response);
-    if (!data.success) throw new Error(data.error || 'Batch delete failed');
   },
 
   async clearAll(): Promise<void> {
-    const response = await fetch(`${API_BASE}/packages/delete-all`, {
-      method: 'DELETE',
-    });
-    const data = await handleJsonResponse(response);
-    if (!data.success) throw new Error(data.error || 'Clear all failed');
+    await fetch(`${API_BASE}/packages/delete-all`, { method: 'DELETE' });
   }
 };
