@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useCallback } from 'react';
-import { packageService } from '../services/packageService';
+import { packageService } from '../services/packageService.ts';
 
 interface UploadModalProps {
   onClose: () => void;
@@ -115,7 +115,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose }) => {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={`
-              relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200
+              relative border-2 border-dashed rounded-xl p-10 text-center transition-all duration-200
               ${isDragging ? 'border-blue-500 bg-blue-50 scale-[1.01]' : 'border-slate-200 bg-slate-50'}
               ${isProcessing ? 'opacity-50 pointer-events-none' : 'cursor-pointer hover:border-blue-400 hover:bg-blue-50/30'}
             `}
@@ -142,44 +142,44 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose }) => {
 
           {/* Upload List */}
           {tasks.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Upload Queue</h3>
               <div className="space-y-2">
                 {tasks.map((task) => (
                   <div 
                     key={task.id} 
                     className={`
-                      flex items-center gap-4 p-3 rounded-lg border text-sm transition-all
+                      flex items-center gap-4 p-4 rounded-lg border text-sm transition-all
                       ${task.status === 'success' ? 'bg-emerald-50 border-emerald-100' : 
                         task.status === 'error' ? 'bg-rose-50 border-rose-100' : 
                         'bg-white border-slate-200'}
                     `}
                   >
                     <div className="flex-shrink-0 w-8 text-center">
-                      {task.status === 'pending' && <i className="far fa-file-archive text-slate-400"></i>}
-                      {task.status === 'uploading' && <i className="fas fa-circle-notch fa-spin text-blue-500"></i>}
-                      {task.status === 'success' && <i className="fas fa-check-circle text-emerald-500"></i>}
-                      {task.status === 'error' && <i className="fas fa-exclamation-circle text-rose-500"></i>}
+                      {task.status === 'pending' && <i className="far fa-file-archive text-slate-400 text-lg"></i>}
+                      {task.status === 'uploading' && <i className="fas fa-circle-notch fa-spin text-blue-500 text-lg"></i>}
+                      {task.status === 'success' && <i className="fas fa-check-circle text-emerald-500 text-lg"></i>}
+                      {task.status === 'error' && <i className="fas fa-exclamation-circle text-rose-500 text-lg"></i>}
                     </div>
                     
                     <div className="flex-grow min-w-0">
                       <div className="flex justify-between items-start gap-2">
-                        <span className="font-medium text-slate-700 truncate block" title={task.file.name}>
+                        <span className="font-bold text-slate-700 truncate block text-sm" title={task.file.name}>
                           {task.file.name}
                         </span>
-                        <span className="text-[10px] text-slate-400 uppercase flex-shrink-0">
+                        <span className="text-xs text-slate-400 uppercase flex-shrink-0 font-medium font-mono">
                           {(task.file.size / 1024 / 1024).toFixed(2)} MB
                         </span>
                       </div>
                       
                       {task.status === 'error' && (
-                        <p className="text-xs text-rose-600 mt-1 font-medium leading-tight">
+                        <p className="text-xs text-rose-600 mt-1 font-semibold leading-tight">
                           {task.error}
                         </p>
                       )}
                       
                       {task.status === 'success' && (
-                        <p className="text-[10px] text-emerald-600 mt-0.5 uppercase font-bold">
+                        <p className="text-xs text-emerald-600 mt-1 uppercase font-bold tracking-tight">
                           Successfully deployed
                         </p>
                       )}
@@ -188,9 +188,9 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose }) => {
                     {!isProcessing && task.status !== 'success' && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); removeTask(task.id); }}
-                        className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors"
+                        className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
                       >
-                        <i className="fas fa-trash-alt text-xs"></i>
+                        <i className="fas fa-trash-alt text-sm"></i>
                       </button>
                     )}
                   </div>
@@ -201,12 +201,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose }) => {
 
           {/* Guidelines if list is empty */}
           {tasks.length === 0 && (
-            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs text-slate-500 space-y-2">
-              <p className="font-bold uppercase text-slate-400">Naming Convention Required:</p>
-              <code className="block bg-slate-100 p-2 rounded text-slate-600 font-mono">
+            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 text-sm text-slate-500 space-y-3">
+              <p className="font-bold uppercase text-xs text-slate-400 tracking-widest">Naming Convention Required:</p>
+              <code className="block bg-slate-100 p-3 rounded-lg text-slate-600 font-mono text-sm border border-slate-200">
                 name-version-linux-arch.ext
               </code>
-              <p className="italic">Example: nginx-v1.2.0-linux-aarch64.tar.gz</p>
+              <p className="italic font-medium">Example: nginx-v1.2.0-linux-aarch64.tar.gz</p>
             </div>
           )}
         </div>
@@ -215,7 +215,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose }) => {
           <button 
             onClick={onClose}
             disabled={isProcessing}
-            className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-30"
+            className="px-5 py-2.5 text-slate-600 font-bold hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-30 text-sm"
           >
             Cancel
           </button>
@@ -225,7 +225,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose }) => {
               <button 
                 onClick={startUpload}
                 disabled={isProcessing}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-200 transition-all disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-200 transition-all disabled:opacity-50 flex items-center gap-2 text-sm"
               >
                 {isProcessing ? (
                   <>
@@ -244,7 +244,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose }) => {
             {tasks.length > 0 && !isProcessing && tasks.every(t => t.status !== 'pending') && (
               <button 
                 onClick={onClose}
-                className="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-bold transition-all"
+                className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-bold transition-all text-sm"
               >
                 Finish
               </button>

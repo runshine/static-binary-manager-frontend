@@ -131,38 +131,38 @@ const PackageListPage: React.FC = () => {
     <div className="space-y-6">
       {/* Condensed Statistics Row */}
       {stats && (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 flex flex-wrap lg:flex-nowrap items-center divide-x divide-slate-100 gap-y-4">
-          <div className="flex items-center gap-8 px-4 whitespace-nowrap text-center sm:text-left">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex flex-wrap lg:flex-nowrap items-center divide-x divide-slate-100 gap-y-4">
+          <div className="flex items-center gap-10 px-4 whitespace-nowrap text-center sm:text-left">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Packages</p>
-              <p className="text-xl font-black text-slate-900">{stats.summary.total_packages}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Packages</p>
+              <p className="text-2xl font-black text-slate-900">{stats.summary.total_packages}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Storage</p>
-              <p className="text-xl font-black text-blue-600">{stats.summary.total_size_human}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Storage</p>
+              <p className="text-2xl font-black text-blue-600">{stats.summary.total_size_human}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Downloads</p>
-              <p className="text-xl font-black text-emerald-600">{stats.summary.total_downloads}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Downloads</p>
+              <p className="text-2xl font-black text-emerald-600">{stats.summary.total_downloads}</p>
             </div>
           </div>
 
-          <div className="flex-grow px-6">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Architecture Distribution</p>
-            <div className="flex flex-wrap gap-1.5">
+          <div className="flex-grow px-8">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Architecture Distribution</p>
+            <div className="flex flex-wrap gap-2">
               {stats.by_architecture.map(item => (
-                <span key={item.architecture} className="px-2 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold text-slate-600">
+                <span key={item.architecture} className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-600">
                   {item.architecture}: <span className="text-slate-900">{item.package_count}</span>
                 </span>
               ))}
             </div>
           </div>
 
-          <div className="flex-grow px-6">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">OS Distribution</p>
-            <div className="flex flex-wrap gap-1.5">
+          <div className="flex-grow px-8">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">OS Distribution</p>
+            <div className="flex flex-wrap gap-2">
               {stats.by_system.map(item => (
-                <span key={item.system} className="px-2 py-0.5 bg-blue-50/50 border border-blue-100 rounded text-[10px] font-bold text-blue-600">
+                <span key={item.system} className="px-2.5 py-1 bg-blue-50/50 border border-blue-100 rounded text-xs font-bold text-blue-600">
                   {item.system}: <span className="text-blue-900">{item.package_count}</span>
                 </span>
               ))}
@@ -208,9 +208,9 @@ const PackageListPage: React.FC = () => {
       </div>
 
       {/* One-Line Search Toolbar */}
-      <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 flex flex-wrap lg:flex-nowrap items-center gap-3">
-        <div className="flex-grow flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50/50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition-all min-w-[180px]">
-          <i className="fas fa-box text-slate-400 text-[10px]"></i>
+      <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-wrap lg:flex-nowrap items-center gap-3">
+        <div className="flex-grow flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2 bg-slate-50/50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition-all min-w-[200px]">
+          <i className="fas fa-box text-slate-400 text-xs"></i>
           <input 
             type="text" placeholder="Package name..." 
             className="w-full bg-transparent border-none text-sm focus:outline-none"
@@ -219,8 +219,8 @@ const PackageListPage: React.FC = () => {
           />
         </div>
 
-        <div className="flex-grow flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50/50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition-all min-w-[180px]">
-          <i className="fas fa-file-code text-slate-400 text-[10px]"></i>
+        <div className="flex-grow flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2 bg-slate-50/50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white transition-all min-w-[200px]">
+          <i className="fas fa-file-code text-slate-400 text-xs"></i>
           <input 
             type="text" placeholder="Search by internal file..." 
             className="w-full bg-transparent border-none text-sm focus:outline-none"
@@ -229,16 +229,16 @@ const PackageListPage: React.FC = () => {
           />
         </div>
         
-        <div className="flex items-center gap-2 whitespace-nowrap">
+        <div className="flex items-center gap-3 whitespace-nowrap">
           <input 
             type="text" placeholder="Version..." 
-            className="w-24 px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-28 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             value={filter.version} onChange={e => setFilter({ ...filter, version: e.target.value })}
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
           />
           
           <select 
-            className="px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
             value={filter.arch} onChange={e => setFilter({ ...filter, arch: e.target.value })}
           >
             <option value="all">Any Arch</option>
@@ -253,7 +253,7 @@ const PackageListPage: React.FC = () => {
           <button 
             onClick={handleSearch} 
             disabled={isSearching} 
-            className="px-6 py-1.5 bg-slate-900 text-white rounded-lg font-bold text-sm hover:bg-slate-800 transition-colors flex items-center gap-2"
+            className="px-6 py-2 bg-slate-900 text-white rounded-lg font-bold text-sm hover:bg-slate-800 transition-colors flex items-center gap-2"
           >
             {isSearching ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-filter text-xs"></i>}
             Apply
@@ -266,7 +266,7 @@ const PackageListPage: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[1400px]">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-bold uppercase tracking-widest">
                 <th className="px-6 py-4 w-12 text-center">
                    <input 
                      type="checkbox" 
@@ -293,7 +293,7 @@ const PackageListPage: React.FC = () => {
               ) : (
                 packages.map(pkg => (
                   <tr key={pkg.id} className="hover:bg-slate-50 group transition-colors">
-                    <td className="px-6 py-4 text-center align-top pt-5">
+                    <td className="px-6 py-4 text-center align-top pt-6">
                       <input 
                         type="checkbox" 
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
@@ -302,92 +302,92 @@ const PackageListPage: React.FC = () => {
                       />
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <Link to={`/package/${pkg.id}`} className="block font-bold text-blue-600 hover:text-blue-800 transition-colors">
+                      <div className="flex flex-col gap-1.5">
+                        <Link to={`/package/${pkg.id}`} className="block font-bold text-blue-600 hover:text-blue-800 transition-colors text-base">
                           {pkg.name}
                         </Link>
-                        <span className="text-[10px] text-slate-400 font-mono">{pkg.version} • {pkg.system}</span>
+                        <span className="text-xs text-slate-400 font-mono font-medium">{pkg.version} • {pkg.system}</span>
                         
                         {/* Show matched files if searching by file */}
                         {pkg.matchedFiles && pkg.matchedFiles.length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Matched Files ({pkg.matchedFiles.length}):</p>
-                            <ul className="space-y-0.5">
+                          <div className="mt-2 space-y-1.5">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Matched Files ({pkg.matchedFiles.length}):</p>
+                            <ul className="space-y-1">
                               {pkg.matchedFiles.slice(0, 3).map((f, i) => (
-                                <li key={i} className="text-[10px] font-mono text-emerald-600 bg-emerald-50 px-1 rounded truncate max-w-xs" title={f.path}>
-                                  <i className="fas fa-file-code mr-1 opacity-50"></i> {f.name}
+                                <li key={i} className="text-xs font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded truncate max-w-xs" title={f.path}>
+                                  <i className="fas fa-file-code mr-1.5 opacity-50"></i> {f.name}
                                 </li>
                               ))}
                               {pkg.matchedFiles.length > 3 && (
-                                <li className="text-[9px] text-slate-400 italic">...and {pkg.matchedFiles.length - 3} more</li>
+                                <li className="text-xs text-slate-400 italic">...and {pkg.matchedFiles.length - 3} more</li>
                               )}
                             </ul>
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 align-top pt-5">
-                      <span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-bold uppercase text-slate-600 border border-slate-200">
+                    <td className="px-6 py-4 align-top pt-6">
+                      <span className="px-2.5 py-1 bg-slate-100 rounded text-xs font-bold uppercase text-slate-600 border border-slate-200">
                         {pkg.arch}
                       </span>
                     </td>
-                    <td className="px-6 py-4 align-top pt-5">
-                      <div className="flex items-center gap-1.5 text-slate-600">
-                        <i className="far fa-file-archive text-[10px] opacity-40"></i>
-                        <span className="font-bold">{pkg.fileCount}</span>
+                    <td className="px-6 py-4 align-top pt-6">
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <i className="far fa-file-archive text-xs opacity-40"></i>
+                        <span className="font-bold text-sm">{pkg.fileCount}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 align-top pt-5 text-slate-600 font-mono text-xs">{formatSize(pkg.totalSize)}</td>
-                    <td className="px-6 py-4 align-top pt-5">
-                      <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-xs">
-                        <i className="fas fa-download text-[10px] opacity-40"></i>
+                    <td className="px-6 py-4 align-top pt-6 text-slate-600 font-mono text-sm">{formatSize(pkg.totalSize)}</td>
+                    <td className="px-6 py-4 align-top pt-6">
+                      <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
+                        <i className="fas fa-download text-xs opacity-40"></i>
                         {pkg.downloadCount || 0}
                       </div>
                     </td>
-                    <td className="px-6 py-4 align-top pt-5 text-[10px] text-slate-500 font-mono whitespace-nowrap">
+                    <td className="px-6 py-4 align-top pt-6 text-xs text-slate-500 font-mono whitespace-nowrap">
                       {formatDate(pkg.uploadDate)}
                     </td>
-                    <td className="px-6 py-4 align-top pt-4">
-                      <div className="flex items-center gap-3">
+                    <td className="px-6 py-4 align-top pt-5">
+                      <div className="flex items-center gap-4">
                         {pkg.verificationStatus === VerificationStatus.SUCCESS ? (
-                          <i className="fas fa-check-circle text-emerald-500"></i>
+                          <i className="fas fa-check-circle text-emerald-500 text-lg"></i>
                         ) : pkg.verificationStatus === VerificationStatus.FAILED ? (
-                          <i className="fas fa-times-circle text-rose-500"></i>
+                          <i className="fas fa-times-circle text-rose-500 text-lg"></i>
                         ) : pkg.verificationStatus === VerificationStatus.VERIFYING ? (
-                          <i className="fas fa-circle-notch fa-spin text-blue-500"></i>
+                          <i className="fas fa-circle-notch fa-spin text-blue-500 text-lg"></i>
                         ) : (
-                          <i className="fas fa-clock text-slate-300"></i>
+                          <i className="fas fa-clock text-slate-300 text-lg"></i>
                         )}
                         <div>
-                          <p className={`text-[10px] font-bold uppercase ${pkg.verificationStatus === VerificationStatus.SUCCESS ? 'text-emerald-700' : 'text-slate-500'}`}>
+                          <p className={`text-xs font-bold uppercase ${pkg.verificationStatus === VerificationStatus.SUCCESS ? 'text-emerald-700' : 'text-slate-500'}`}>
                             {pkg.verificationStatus}
                           </p>
-                          <p className="text-[9px] text-slate-400 font-mono">Audit: {formatDate(pkg.lastCheckTime)}</p>
+                          <p className="text-xs text-slate-400 font-mono">Audit: {formatDate(pkg.lastCheckTime)}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right align-top pt-4">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <td className="px-6 py-4 text-right align-top pt-5">
+                      <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => packageService.downloadPackage(pkg.id, pkg.filename)} 
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors" 
                           title="Download"
                         >
-                          <i className="fas fa-download text-sm"></i>
+                          <i className="fas fa-download text-base"></i>
                         </button>
                         <button 
                           onClick={() => handleSingleVerify(pkg.id)} 
                           className="p-2 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" 
                           title="Verify"
                         >
-                          <i className="fas fa-sync-alt text-sm"></i>
+                          <i className="fas fa-sync-alt text-base"></i>
                         </button>
                         <button 
                           onClick={() => handleDelete(pkg.id, pkg.name)} 
                           className="p-2 text-rose-600 hover:bg-rose-50 rounded transition-colors" 
                           title="Delete"
                         >
-                          <i className="fas fa-trash-alt text-sm"></i>
+                          <i className="fas fa-trash-alt text-base"></i>
                         </button>
                       </div>
                     </td>

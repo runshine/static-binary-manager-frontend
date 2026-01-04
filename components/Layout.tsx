@@ -15,7 +15,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
             <span className="font-bold text-xl tracking-tight">Static Binary Package Manager</span>
           </Link>
-          {/* Removed navigation links from here */}
         </div>
       </header>
       
@@ -23,12 +22,14 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         {children}
       </main>
 
-      <footer className="bg-white border-t border-slate-200 py-6 mt-12">
-        <div className="max-w-[1800px] mx-auto px-6 text-center text-slate-500 text-sm flex justify-between items-center">
-          <span>&copy; {new Date().getFullYear()} Static Binary Package Manager. Managed Linux Storage.</span>
-          <div className="flex gap-4">
-            <span className="text-slate-400">Status: <span className="text-emerald-500 font-medium">Online</span></span>
-            <span className="text-slate-400">API: <span className="text-blue-500 font-medium">v1.2.0</span></span>
+      <footer className="bg-white border-t border-slate-200 py-8 mt-12">
+        <div className="max-w-[1800px] mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <span className="text-slate-500 text-sm font-medium">
+            &copy; {new Date().getFullYear()} Static Binary Package Manager. Managed Linux Storage.
+          </span>
+          <div className="flex gap-6 text-sm">
+            <span className="text-slate-400 font-medium">Status: <span className="text-emerald-500 font-bold uppercase tracking-tight">Online</span></span>
+            <span className="text-slate-400 font-medium">API: <span className="text-blue-500 font-bold">v1.2.0</span></span>
           </div>
         </div>
       </footer>
