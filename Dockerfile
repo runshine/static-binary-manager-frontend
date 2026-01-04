@@ -4,16 +4,14 @@ FROM node:20-alpine AS builder
 # 设置工作目录
 WORKDIR /app
 
-# 复制 package.json 和 package-lock.json（如果存在）
+# 复制 package.json
 COPY package*.json ./
+
+# 智能安装依赖：如果有 package-lock.json 则用 npm ci，否则用 npm install
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # 复制源代码
 COPY . .
-
-RUN npm install
-
-# 安装依赖
-RUN npm ci --only=production
 
 # 构建应用
 RUN npm run build
@@ -22,10 +20,10 @@ RUN npm run build
 FROM nginx:alpine
 
 # 复制nginx配置文件
-#COPY nginx.conf /etc/nginx/nginx.conf
+# COPY nginx.conf /etc/nginx/nginx.conf
 
-# 从构建阶段复制构建产物
-COPY --from=builder /app/dist /usr/share/nginx/html
+# 从构建阶段复制构建产物，并修改权限
+COPY --from=builder --chown=nginx:nodejs /app/dist /usr/share/nginx/html
 
 # 暴露80端口
 EXPOSE 80
