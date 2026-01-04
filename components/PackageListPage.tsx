@@ -142,7 +142,7 @@ const PackageListPage: React.FC = () => {
               <p className="text-xl font-black text-blue-600">{stats.summary.total_size_human}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Downloads</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Downloads</p>
               <p className="text-xl font-black text-emerald-600">{stats.summary.total_downloads}</p>
             </div>
           </div>
@@ -194,7 +194,7 @@ const PackageListPage: React.FC = () => {
                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold flex items-center gap-2 shadow-sm transition-all text-sm"
               >
                 {isVerifying ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-shield-alt"></i>}
-                Verify ({selectedIds.size})
+                Verify Selected ({selectedIds.size})
               </button>
             </>
           )}
@@ -264,7 +264,7 @@ const PackageListPage: React.FC = () => {
       {/* Table Section */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1300px]">
+          <table className="w-full text-left border-collapse min-w-[1400px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
                 <th className="px-6 py-4 w-12 text-center">
@@ -279,6 +279,7 @@ const PackageListPage: React.FC = () => {
                 <th className="px-6 py-4">Architecture</th>
                 <th className="px-6 py-4">Files</th>
                 <th className="px-6 py-4">Size</th>
+                <th className="px-6 py-4">Downloads</th>
                 <th className="px-6 py-4">Uploaded At</th>
                 <th className="px-6 py-4">Health Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -287,7 +288,7 @@ const PackageListPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {packages.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-400 text-sm">No packages matching criteria.</td>
+                  <td colSpan={9} className="px-6 py-12 text-center text-slate-400 text-sm">No packages matching criteria.</td>
                 </tr>
               ) : (
                 packages.map(pkg => (
@@ -337,6 +338,12 @@ const PackageListPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 align-top pt-5 text-slate-600 font-mono text-xs">{formatSize(pkg.totalSize)}</td>
+                    <td className="px-6 py-4 align-top pt-5">
+                      <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-xs">
+                        <i className="fas fa-download text-[10px] opacity-40"></i>
+                        {pkg.downloadCount || 0}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 align-top pt-5 text-[10px] text-slate-500 font-mono whitespace-nowrap">
                       {formatDate(pkg.uploadDate)}
                     </td>
