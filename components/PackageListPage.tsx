@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { PackageMetadata, VerificationStatus, PackageFilter, GlobalStats } from '../types.ts';
 import { packageService } from '../services/packageService.ts';
@@ -15,6 +15,10 @@ const PackageListPage: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
   const loadData = useCallback(async (isSearchAction = false) => {
     setIsSearching(true);
     try {
@@ -24,6 +28,7 @@ const PackageListPage: React.FC = () => {
       ]);
       setPackages(pkgs);
       setStats(statsData);
+      setCurrentPage(1); // Reset to first page on new search
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
@@ -36,6 +41,15 @@ const PackageListPage: React.FC = () => {
   }, []);
 
   const handleSearch = () => loadData(true);
+
+  // Derived Pagination Data
+  const totalItems = packages.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  
+  const paginatedPackages = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return packages.slice(startIndex, startIndex + pageSize);
+  }, [packages, currentPage, pageSize]);
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -271,8 +285,16 @@ const PackageListPage: React.FC = () => {
                    <input 
                      type="checkbox" 
                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
-                     checked={packages.length > 0 && selectedIds.size === packages.length}
-                     onChange={e => e.target.checked ? setSelectedIds(new Set(packages.map(p => p.id))) : setSelectedIds(new Set())} 
+                     checked={paginatedPackages.length > 0 && paginatedPackages.every(p => selectedIds.has(p.id))}
+                     onChange={e => {
+                        const newSelected = new Set(selectedIds);
+                        if (e.target.checked) {
+                          paginatedPackages.forEach(p => newSelected.add(p.id));
+                        } else {
+                          paginatedPackages.forEach(p => newSelected.delete(p.id));
+                        }
+                        setSelectedIds(newSelected);
+                     }} 
                    />
                 </th>
                 <th className="px-6 py-4">Identity</th>
@@ -286,12 +308,12 @@ const PackageListPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {packages.length === 0 ? (
+              {paginatedPackages.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-12 text-center text-slate-400 text-sm">No packages matching criteria.</td>
                 </tr>
               ) : (
-                packages.map(pkg => (
+                paginatedPackages.map(pkg => (
                   <tr key={pkg.id} className="hover:bg-slate-50 group transition-colors">
                     <td className="px-6 py-4 text-center align-top pt-6">
                       <input 
@@ -397,6 +419,76 @@ const PackageListPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Toolbar */}
+        {totalItems > 0 && (
+          <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">
+              <div className="flex items-center gap-2">
+                <span>Show</span>
+                <select 
+                  className="bg-white border border-slate-300 rounded px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500"
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={500}>500</option>
+                </select>
+                <span>per page</span>
+              </div>
+              <div className="border-l border-slate-300 h-4 mx-1"></div>
+              <span>
+                Showing {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} to {Math.min(totalItems, currentPage * pageSize)} of {totalItems} items
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="p-2 w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center"
+                title="First Page"
+              >
+                <i className="fas fa-angle-double-left"></i>
+              </button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="p-2 w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center"
+                title="Previous Page"
+              >
+                <i className="fas fa-angle-left"></i>
+              </button>
+              
+              <div className="flex items-center px-4 font-bold text-sm text-slate-700">
+                Page {currentPage} of {totalPages}
+              </div>
+
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2 w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center"
+                title="Next Page"
+              >
+                <i className="fas fa-angle-right"></i>
+              </button>
+              <button 
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="p-2 w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center"
+                title="Last Page"
+              >
+                <i className="fas fa-angle-double-right"></i>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showUpload && <UploadModal onClose={() => { setShowUpload(false); loadData(); }} />}
