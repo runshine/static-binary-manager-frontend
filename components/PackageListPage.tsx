@@ -19,16 +19,31 @@ const PackageListPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
 
-  const loadData = useCallback(async (isSearchAction = false) => {
+  /**
+   * Loads data from the server.
+   * @param isSearchAction If true, resets current page to 1.
+   * @param maintainPage If provided, sets the current page to this value after loading.
+   */
+  const loadData = useCallback(async (isSearchAction = false, maintainPage?: number) => {
     setIsSearching(true);
     try {
       const [pkgs, statsData] = await Promise.all([
-        isSearchAction ? packageService.searchPackages(filter) : packageService.getPackages(),
+        isSearchAction || filter.name || filter.version || filter.arch !== 'all' || filter.filePath 
+          ? packageService.searchPackages(filter) 
+          : packageService.getPackages(),
         packageService.getStatistics()
       ]);
       setPackages(pkgs);
       setStats(statsData);
-      setCurrentPage(1); // Reset to first page on new search
+      
+      if (isSearchAction) {
+        setCurrentPage(1);
+      } else if (maintainPage !== undefined) {
+        setCurrentPage(maintainPage);
+      }
+      
+      // Scroll to top of the page to simulate "reload" effect
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
@@ -36,13 +51,26 @@ const PackageListPage: React.FC = () => {
     }
   }, [filter]);
 
+  // Initial load
   useEffect(() => {
     loadData();
   }, []);
 
+  // Handle page changes by triggering a reload
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    loadData(false, newPage);
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+    loadData(true);
+  };
+
   const handleSearch = () => loadData(true);
 
-  // Derived Pagination Data
+  // Derived Pagination Data (Client-side slicing as requested)
   const totalItems = packages.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   
@@ -77,7 +105,7 @@ const PackageListPage: React.FC = () => {
     setIsVerifying(true);
     try {
       await packageService.verifyPackages(Array.from(selectedIds) as string[]);
-      await loadData();
+      await loadData(false, currentPage);
     } catch (error) {
       console.error("Verification failed:", error);
       alert("Verification process failed.");
@@ -111,7 +139,7 @@ const PackageListPage: React.FC = () => {
         next.delete(id);
         return next;
       });
-      await loadData();
+      await loadData(false, currentPage);
     } catch (error) {
       alert("Failed to delete package.");
     }
@@ -126,7 +154,7 @@ const PackageListPage: React.FC = () => {
     try {
       await packageService.bulkDelete(ids);
       setSelectedIds(new Set());
-      await loadData();
+      await loadData(true);
     } catch (error) {
       alert("Bulk delete failed.");
     } finally {
@@ -276,7 +304,15 @@ const PackageListPage: React.FC = () => {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative min-h-[400px]">
+        {isSearching && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <i className="fas fa-circle-notch fa-spin text-3xl text-blue-600"></i>
+              <span className="text-sm font-bold text-slate-600">Refreshing data...</span>
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[1400px]">
             <thead>
@@ -429,10 +465,7 @@ const PackageListPage: React.FC = () => {
                 <select 
                   className="bg-white border border-slate-300 rounded px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500"
                   value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
+                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
@@ -450,16 +483,16 @@ const PackageListPage: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1 || isSearching}
                 className="p-2 w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center"
                 title="First Page"
               >
                 <i className="fas fa-angle-double-left"></i>
               </button>
               <button 
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1 || isSearching}
                 className="p-2 w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center"
                 title="Previous Page"
               >
@@ -471,16 +504,16 @@ const PackageListPage: React.FC = () => {
               </div>
 
               <button 
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages || isSearching}
                 className="p-2 w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center"
                 title="Next Page"
               >
                 <i className="fas fa-angle-right"></i>
               </button>
               <button 
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages || isSearching}
                 className="p-2 w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center"
                 title="Last Page"
               >
@@ -491,7 +524,7 @@ const PackageListPage: React.FC = () => {
         )}
       </div>
 
-      {showUpload && <UploadModal onClose={() => { setShowUpload(false); loadData(); }} />}
+      {showUpload && <UploadModal onClose={() => { setShowUpload(false); loadData(false, currentPage); }} />}
     </div>
   );
 };
