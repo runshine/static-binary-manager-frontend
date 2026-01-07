@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { PackageMetadata, VerificationStatus, PackageFilter, GlobalStats } from '../types.ts';
 import { packageService } from '../services/packageService.ts';
 import UploadModal from './UploadModal.tsx';
+import DeleteConfirmModal from './DeleteConfirmModal.tsx';
 
 const PackageListPage: React.FC = () => {
   const [packages, setPackages] = useState<PackageMetadata[]>([]);
@@ -14,6 +15,9 @@ const PackageListPage: React.FC = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Deletion State
+  const [packagesToDelete, setPackagesToDelete] = useState<PackageMetadata[]>([]);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,7 +74,7 @@ const PackageListPage: React.FC = () => {
 
   const handleSearch = () => loadData(true);
 
-  // Derived Pagination Data (Client-side slicing as requested)
+  // Derived Pagination Data
   const totalItems = packages.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   
@@ -130,33 +134,39 @@ const PackageListPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return;
-    try {
-      await packageService.deletePackage(id);
-      setSelectedIds(prev => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      await loadData(false, currentPage);
-    } catch (error) {
-      alert("Failed to delete package.");
-    }
+  // Open single delete modal
+  const promptSingleDelete = (pkg: PackageMetadata) => {
+    setPackagesToDelete([pkg]);
   };
 
-  const handleBulkDelete = async () => {
-    const ids = Array.from(selectedIds) as string[];
-    if (ids.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${ids.length} selected packages?`)) return;
-    
+  // Open bulk delete modal
+  const promptBulkDelete = () => {
+    const pkgs = packages.filter(p => selectedIds.has(p.id));
+    if (pkgs.length === 0) return;
+    setPackagesToDelete(pkgs);
+  };
+
+  const handleConfirmDelete = async () => {
     setIsDeleting(true);
     try {
-      await packageService.bulkDelete(ids);
-      setSelectedIds(new Set());
-      await loadData(true);
+      const ids = packagesToDelete.map(p => p.id);
+      if (ids.length === 1) {
+        await packageService.deletePackage(ids[0]);
+      } else {
+        await packageService.bulkDelete(ids);
+      }
+      
+      // Update local selection
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        ids.forEach(id => next.delete(id));
+        return next;
+      });
+      
+      setPackagesToDelete([]);
+      await loadData(false, currentPage);
     } catch (error) {
-      alert("Bulk delete failed.");
+      alert("Failed to delete packages.");
     } finally {
       setIsDeleting(false);
     }
@@ -223,11 +233,10 @@ const PackageListPage: React.FC = () => {
           {selectedIds.size > 0 && (
             <>
               <button 
-                onClick={handleBulkDelete}
-                disabled={isDeleting}
+                onClick={promptBulkDelete}
                 className="px-4 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 font-bold flex items-center gap-2 border border-rose-200 transition-all text-sm"
               >
-                {isDeleting ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-trash-alt"></i>}
+                <i className="fas fa-trash-alt"></i>
                 Delete ({selectedIds.size})
               </button>
               <button 
@@ -441,7 +450,7 @@ const PackageListPage: React.FC = () => {
                           <i className="fas fa-sync-alt text-base"></i>
                         </button>
                         <button 
-                          onClick={() => handleDelete(pkg.id, pkg.name)} 
+                          onClick={() => promptSingleDelete(pkg)} 
                           className="p-2 text-rose-600 hover:bg-rose-50 rounded transition-colors" 
                           title="Delete"
                         >
@@ -525,6 +534,15 @@ const PackageListPage: React.FC = () => {
       </div>
 
       {showUpload && <UploadModal onClose={() => { setShowUpload(false); loadData(false, currentPage); }} />}
+      
+      {packagesToDelete.length > 0 && (
+        <DeleteConfirmModal 
+          packages={packagesToDelete}
+          isProcessing={isDeleting}
+          onConfirm={handleConfirmDelete}
+          onClose={() => setPackagesToDelete([])}
+        />
+      )}
     </div>
   );
 };
