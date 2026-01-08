@@ -1,7 +1,7 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { PackageMetadata } from '../types.ts';
+import { PackageMetadata, FileEntry } from '../types.ts';
 import { packageService } from '../services/packageService.ts';
 
 const PackageDetailPage: React.FC = () => {
@@ -9,6 +9,11 @@ const PackageDetailPage: React.FC = () => {
   const [pkg, setPkg] = useState<PackageMetadata | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Pagination State for Files
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -19,6 +24,35 @@ const PackageDetailPage: React.FC = () => {
         .finally(() => setLoading(false));
     }
   }, [id, navigate]);
+
+  const totalFiles = pkg?.files?.length || 0;
+  const totalPages = Math.max(1, Math.ceil(totalFiles / pageSize));
+
+  const paginatedFiles = useMemo(() => {
+    if (!pkg?.files) return [];
+    const startIndex = (currentPage - 1) * pageSize;
+    return pkg.files.slice(startIndex, startIndex + pageSize);
+  }, [pkg?.files, currentPage, pageSize]);
+
+  const handlePageChange = useCallback((page: number) => {
+    setIsRefreshing(true);
+    setCurrentPage(page);
+    // Simulate content refresh feel
+    setTimeout(() => {
+      setIsRefreshing(false);
+      const explorer = document.getElementById('file-explorer-header');
+      if (explorer) explorer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  }, []);
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setIsRefreshing(true);
+    setPageSize(size);
+    setCurrentPage(1);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 150);
+  }, []);
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -87,7 +121,7 @@ const PackageDetailPage: React.FC = () => {
                   <span className="font-bold text-slate-800 uppercase">{pkg.system}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 font-medium">File Count</span>
+                  <span className="text-slate-500 font-medium">Total Files</span>
                   <span className="font-bold text-slate-800">{pkg.fileCount}</span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -121,47 +155,130 @@ const PackageDetailPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="xl:col-span-3">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-5 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Internal File Explorer</h3>
+        <div className="xl:col-span-3 space-y-4">
+          <div id="file-explorer-header" className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+            <div className="p-5 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div>
+                <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Internal File Explorer</h3>
+                <p className="text-xs text-slate-400 mt-1 font-medium">Managing {totalFiles} files in this distribution</p>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-slate-400 uppercase">Page Size</span>
+                <select 
+                  className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+                  value={pageSize}
+                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                >
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={250}>250</option>
+                  <option value={500}>500</option>
+                  <option value={1000}>1000</option>
+                  <option value={5000}>5000</option>
+                </select>
+              </div>
             </div>
-            <div className="max-h-[800px] overflow-y-auto">
-              <table className="w-full text-left">
-                <thead className="sticky top-0 bg-slate-50 z-10 shadow-sm border-b border-slate-200">
-                  <tr className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    <th className="px-6 py-4">File Path</th>
-                    <th className="px-6 py-4">Size</th>
-                    <th className="px-6 py-4">Pulls</th>
-                    <th className="px-6 py-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {pkg.files.map((file, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 group transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-mono text-slate-700 truncate max-w-xl" title={file.path}>{file.path}</p>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-500 font-mono">
-                        {formatSize(file.size)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-400 font-medium">
-                        {file.downloadCount || 0}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button 
-                          onClick={() => packageService.downloadFile(pkg.id, file.path)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                          title="Download File"
-                        >
-                          <i className="fas fa-download text-base"></i>
-                        </button>
-                      </td>
+
+            <div className="relative overflow-hidden">
+              {isRefreshing && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-20 flex items-center justify-center animate-in fade-in duration-200">
+                  <i className="fas fa-circle-notch fa-spin text-2xl text-blue-600"></i>
+                </div>
+              )}
+              
+              <div className="max-h-[800px] overflow-y-auto custom-scrollbar">
+                <table className="w-full text-left">
+                  <thead className="sticky top-0 bg-slate-50 z-10 shadow-sm border-b border-slate-200">
+                    <tr className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      <th className="px-6 py-4">File Path</th>
+                      <th className="px-6 py-4">Size</th>
+                      <th className="px-6 py-4">Pulls</th>
+                      <th className="px-6 py-4 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paginatedFiles.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-20 text-center">
+                          <p className="text-slate-400 text-sm italic">No files available in this archive range.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedFiles.map((file, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 group transition-colors">
+                          <td className="px-6 py-4">
+                            <p className="text-sm font-mono text-slate-700 truncate max-w-xl" title={file.path || file.file_path}>
+                              {file.path || file.file_path}
+                            </p>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-500 font-mono">
+                            {formatSize(file.size || file.file_size || 0)}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-400 font-medium">
+                            {file.downloadCount || 0}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button 
+                              onClick={() => packageService.downloadFile(pkg.id, file.path || file.file_path || '')}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                              title="Download File"
+                            >
+                              <i className="fas fa-download text-base"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+            {/* Pagination Controls */}
+            {totalFiles > pageSize && (
+              <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  Showing {Math.min(totalFiles, (currentPage - 1) * pageSize + 1)} - {Math.min(totalFiles, currentPage * pageSize)} of {totalFiles} entries
+                </div>
+                
+                <div className="flex items-center gap-1.5">
+                  <button 
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1 || isRefreshing}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  >
+                    <i className="fas fa-angle-double-left text-xs"></i>
+                  </button>
+                  <button 
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1 || isRefreshing}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  >
+                    <i className="fas fa-angle-left text-xs"></i>
+                  </button>
+                  
+                  <div className="px-3 text-sm font-bold text-slate-700">
+                    {currentPage} / {totalPages}
+                  </div>
+
+                  <button 
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages || isRefreshing}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  >
+                    <i className="fas fa-angle-right text-xs"></i>
+                  </button>
+                  <button 
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages || isRefreshing}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  >
+                    <i className="fas fa-angle-double-right text-xs"></i>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
