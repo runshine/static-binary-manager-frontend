@@ -74,6 +74,11 @@ const PackageListPage: React.FC = () => {
 
   const handleSearch = () => loadData(true);
 
+  const handleResetFilters = () => {
+    setFilter({ name: '', version: '', arch: 'all', filePath: '' });
+    loadData(true);
+  };
+
   // Derived Pagination Data
   const totalItems = packages.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -313,12 +318,12 @@ const PackageListPage: React.FC = () => {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative min-h-[400px]">
+      <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative transition-all duration-300 ${isSearching ? 'min-h-[200px]' : ''}`}>
         {isSearching && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
               <i className="fas fa-circle-notch fa-spin text-3xl text-blue-600"></i>
-              <span className="text-sm font-bold text-slate-600">Refreshing data...</span>
+              <span className="text-sm font-bold text-slate-600 uppercase tracking-widest">Updating View...</span>
             </div>
           </div>
         )}
@@ -355,7 +360,23 @@ const PackageListPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {paginatedPackages.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-slate-400 text-sm">No packages matching criteria.</td>
+                  <td colSpan={9} className="px-6 py-16 text-center">
+                    <div className="max-w-xs mx-auto space-y-4">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                        <i className="fas fa-search text-2xl"></i>
+                      </div>
+                      <div>
+                        <p className="text-slate-600 font-bold">No results found</p>
+                        <p className="text-slate-400 text-sm mt-1">Try adjusting your filters or search terms.</p>
+                      </div>
+                      <button 
+                        onClick={handleResetFilters}
+                        className="text-blue-600 font-bold text-sm hover:underline"
+                      >
+                        Clear all filters
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ) : (
                 paginatedPackages.map(pkg => (
